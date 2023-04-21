@@ -1,17 +1,42 @@
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate lazy_static;
-
 mod commands;
+use commands::{
+	Command,
+	// CommandOption,
+	// CommandOptionChoice,
+};
+
 mod webhook;
 mod encryption;
 
 
 
+#[macro_use] extern crate rocket;
+#[macro_use] extern crate lazy_static;
+
+
+
 #[rocket::main]
-async fn main() -> Result<(), rocket::Error>{
+async fn main() {
 
-	webhook::listen().launch().await?;
+	let command = match Command::new(
+		"test".to_string(),
+		1,
+		"test description".to_string(),
+		None
+	).await {
+		Ok(c) => c,
+		Err(e) => return println!("Failed to register command!\n{}", e),
+	};
 
-	Ok(())
+
+
+	if webhook::listen().launch().await.is_ok() { 
+		// executes when the webhook is closed
+		println!("Closed webhook");
+	}
+
+	if command.remove().await.is_ok() {
+		println!("Successfully removed command");
+	}
 
 }

@@ -8,7 +8,6 @@ use hex;
 
 pub fn verify(message: String, signature_hex: String) -> bool {
 	// verifies a 64-bit message using 32-bit signature
-
 	let public_key_bytes: [u8; 32] = match hex::decode(dotenv::var("PUBLIC_KEY").unwrap()) {
 		Ok(v) => {
 			match v.try_into() {
@@ -35,9 +34,6 @@ pub fn verify(message: String, signature_hex: String) -> bool {
 	};
 
 	let public_key = PublicKey::from_bytes(&public_key_bytes).unwrap();
-	match public_key.verify(message.as_bytes(), &signature) {
-		Ok(_) => true,
-		Err(_) => false,
-	}
+	public_key.verify(message.as_bytes(), &signature).is_ok()
 
 }

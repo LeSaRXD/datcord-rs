@@ -8,38 +8,90 @@ use serde::{Serialize, Deserialize};
 
 
 lazy_static! {
+
 	static ref CLIENT: Client = Client::new();
+
+	static ref CLIENT_ID: String = dotenv::var("CLIENT_ID").unwrap();
+	static ref BOT_TOKEN: String = dotenv::var("BOT_TOKEN").unwrap();
+	
 }
+
 
 
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Command {
-	pub id: Option<String>,
+	pub id: String,
 	name: String,
-	r#type: u8,
+	#[serde(rename = "type")]
+	typ: u8,
 	description: String,
 	options: Option<Vec<CommandOption>>,
 }
 impl Command {
-	pub fn new(name: String, r#type: u8, description: String, options: Option<Vec<CommandOption>>) -> Self {
-		Self { id: None, name, r#type, description, options }
+
+	// creates a new command and registers it in the discord api
+	pub async fn new(name: String, typ: u8, description: String, options: Option<Vec<CommandOption>>) -> Result<Self, reqwest::Error> {
+		
+		let command = Self { id: "0".to_string(), name, typ, description, options };
+
+		match CLIENT
+			.post(format!("https://discord.com/api/v10/applications/{}/commands", CLIENT_ID.to_string()))
+			.header(header::AUTHORIZATION, format!("Bot {}", BOT_TOKEN.to_string()))
+			.json(&command)
+			.send()
+			.await {
+				Ok(r) => r.json::<Command>().await,
+				Err(e) => Err(e),
+			}
+
 	}
+
+	// removes current command from the discord api
+	pub async fn remove(self) -> Result<Response, reqwest::Error> {
+
+		CLIENT
+			.delete(format!("https://discord.com/api/v10/applications/{}/commands/{}", dotenv::var("CLIENT_ID").unwrap(), self.id))
+			.header(header::AUTHORIZATION, format!("Bot {}", dotenv::var("BOT_TOKEN").unwrap()))
+			.send()
+			.await
+
+	}
+
+	// gets all commands from the discord api
+	pub async fn get_all() -> Result<Vec<Command>, reqwest::Error> {
+
+		match CLIENT
+			.get(format!("https://discord.com/api/v10/applications/{}/commands", CLIENT_ID.to_string()))
+			.header(header::AUTHORIZATION, format!("Bot {}", BOT_TOKEN.to_string()))
+			.send()
+			.await {
+				Ok(r) => r.json::<Vec<Command>>().await,
+				Err(e) => Err(e),
+			}
+
+	}
+	
 }
+
+
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CommandOption {
 	name: String,
-	r#type: u8,
+	#[serde(rename = "type")]
+	typ: u8,
 	description: String,
 	required: bool,
 	choices: Option<Vec<CommandOptionChoice>>,
 }
 impl CommandOption {
-	pub	fn new(name: String, r#type: u8, description: String, required: bool, choices: Option<Vec<CommandOptionChoice>>) -> Self {
-		Self { name, r#type, description, required, choices }
+	pub	fn new(name: String, typ: u8, description: String, required: bool, choices: Option<Vec<CommandOptionChoice>>) -> Self {
+		Self { name, typ, description, required, choices }
 	}
 }
+
+
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CommandOptionChoice {
@@ -50,53 +102,4 @@ impl CommandOptionChoice {
 	pub fn new(name: String, value: String) -> Self {
 		Self { name, value }
 	}
-}
-
-
-
-#[derive(Debug)]
-pub enum GetError {
-	ReqwestError(reqwest::Error),
-	JsonError(serde_json::Error),
-}
-pub async fn get_all(client_id: &String, bot_token: &String) -> Result<Vec<Command>, GetError> {
-
-	let json = match CLIENT
-		.get(format!("https://discord.com/api/v10/applications/{}/commands", client_id))
-		.header(header::AUTHORIZATION, format!("Bot {}", bot_token))
-		.send()
-		.await {
-			Ok(r) => match r.text().await {
-				Ok(t) => t,
-				Err(e) => return Err(GetError::ReqwestError(e)),
-			},
-			Err(e) => return Err(GetError::ReqwestError(e)),
-		};
-
-	match serde_json::from_str::<Vec<Command>>(&json) {
-		Ok(v) => Ok(v),
-		Err(e) => Err(GetError::JsonError(e)),
-	}
-
-}
-
-pub async fn remove(command_id: &String, client_id: &String, bot_token: &String) -> Result<Response, reqwest::Error> {
-
-	CLIENT
-		.delete(format!("https://discord.com/api/v10/applications/{}/commands/{}", client_id, command_id))
-		.header(header::AUTHORIZATION, format!("Bot {}", bot_token))
-		.send()
-		.await
-
-}
-
-pub async fn register(command: &Command, client_id: &String, bot_token: &String) -> Result<Response, reqwest::Error> {
-
-	CLIENT
-		.post(format!("https://discord.com/api/v10/applications/{}/commands", client_id))
-		.header(header::AUTHORIZATION, format!("Bot {}", bot_token).as_str())
-		.json(&command)
-		.send()
-		.await
-
 }
