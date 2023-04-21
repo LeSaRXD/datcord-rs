@@ -3,32 +3,35 @@ use rocket::{
 	Build,
 	http::Status,
 	response::{content::RawJson},
-	serde::Deserialize,
 	Request,
-	request::FromRequest,
+	request::{self, FromRequest},
 };
+use crate::encryption;
 
 
-
-#[derive(Deserialize)]
-struct CommandData {
-	r#type: u8,
-}
 
 #[derive(Debug)]
 struct CommandHeaders {
-	signature: Option<String>,
-	timestamp: Option<String>,
+	signature: String,
+	timestamp: String,
 }
-impl<'a, 'r> FromRequest<'a, 'r> for CommandHeaders {
 
-	fn from_request(request: &'a Request<'r>) -> Self {
-		Self {
-			signature: request.headers().get_one("X-Signature-Ed25519").map(|s| s.to_owned()),
-			timestamp: request.headers().get_one("X-Signature-Timestamp").map(|s| s.to_owned()),
-		}
+#[async_trait]
+impl<'r> FromRequest<'r> for CommandHeaders {
+	type Error = ();
+
+	async fn from_request(reqest: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+		request::Outcome::Success(Self {
+			signature: match reqest.headers().get_one("X-Signature-Ed25519") {
+				Some(h) => h.to_owned(),
+				None => return request::Outcome::Failure((Status::BadRequest, ())),
+			},
+			timestamp: match reqest.headers().get_one("X-Signature-Timestamp") {
+				Some(h) => h.to_owned(),
+				None => return request::Outcome::Failure((Status::BadRequest, ())),
+			},
+		})
 	}
-
 }
 
 
@@ -36,25 +39,24 @@ impl<'a, 'r> FromRequest<'a, 'r> for CommandHeaders {
 pub fn listen() -> Rocket<Build> {
 	rocket::build()
 		.mount("/api/", routes![
-			index,
-			command,
+			interaction,
 		])
 }
 
-#[get("/")]
-fn index() -> Status {
-	Status::Ok
-}
 
-#[post("/", format = "application/json", data = "<command_data>")]
-fn command(command_data: String, headers: CommandHeaders) -> RawJson<String> {
-	// println!("{}\n{:?}\n{:?}", command_data.r#type, command_data.signature, command_data.timestamp);
-	println!("{:?}\n{}", headers, command_data);
 
-	// match command_data.r#type {
-	// 	1 => RawJson(r#"{ "type": 1 }"#.to_string()),
-	// 	_ => RawJson(r#"{ "type": 0 }"#.to_string()),
-	// }
-	RawJson(r#"{ "type": 1 }"#.to_string())
+#[post("/", format = "application/json", data = "<body>")]
+fn interaction(headers: CommandHeaders, body: String) -> Result<RawJson<String>, Status> {
+
+	// verify using Ed25519 encryption
+	if !encryption::verify(
+		format!("{}{}", headers.timestamp, body), // timestamp + body
+		headers.signature // signature
+	) {
+		return Err(Status::Unauthorized)
+	}
+
+	
+	Ok(RawJson(r#"{ "type": 1 }"#.to_string()))
 
 }

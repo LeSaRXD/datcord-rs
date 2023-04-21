@@ -59,7 +59,6 @@ pub enum GetError {
 	ReqwestError(reqwest::Error),
 	JsonError(serde_json::Error),
 }
-
 pub async fn get_all(client_id: &String, bot_token: &String) -> Result<Vec<Command>, GetError> {
 
 	let json = match CLIENT

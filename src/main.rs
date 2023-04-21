@@ -2,20 +2,16 @@
 #[macro_use] extern crate lazy_static;
 
 mod commands;
-// use commands::{Command, CommandOption, CommandOptionChoice};
-
 mod webhook;
+mod encryption;
 
 
 
-#[launch]
-fn rocket() -> _ {
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error>{
 
-	// let client_id = dotenv::var("CLIENT_ID").unwrap();
-	// let bot_token = dotenv::var("BOT_TOKEN").unwrap();
+	webhook::listen().launch().await?;
 
-
-
-	webhook::listen()
+	Ok(())
 
 }
