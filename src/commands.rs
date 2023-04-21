@@ -4,6 +4,7 @@ use reqwest::{
 	header
 };
 use serde::{Serialize, Deserialize};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 
 
 
@@ -18,20 +19,27 @@ lazy_static! {
 
 
 
+#[derive(Serialize_repr, Deserialize_repr, Debug)]
+#[repr(u8)]
+pub enum CommandType {
+	ChatInput = 1,
+	User = 2,
+	Message = 3,
+}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct Command {
 	pub id: String,
 	name: String,
 	#[serde(rename = "type")]
-	typ: u8,
+	typ: CommandType,
 	description: String,
 	options: Option<Vec<CommandOption>>,
 }
 impl Command {
 
 	// creates a new command and registers it in the discord api
-	pub async fn new(name: String, typ: u8, description: String, options: Option<Vec<CommandOption>>) -> Result<Self, reqwest::Error> {
+	pub async fn new(name: String, typ: CommandType, description: String, options: Option<Vec<CommandOption>>) -> Result<Self, reqwest::Error> {
 		
 		let command = Self { id: "0".to_string(), name, typ, description, options };
 

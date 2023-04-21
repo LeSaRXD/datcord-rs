@@ -6,18 +6,19 @@ use rocket::{
 	Request,
 	request::{self, FromRequest},
 };
+use serde::{Serialize, Deserialize};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 use crate::encryption;
 
 
 
 #[derive(Debug)]
-struct CommandHeaders {
+struct VerificationHeaders {
 	signature: String,
 	timestamp: String,
 }
-
 #[async_trait]
-impl<'r> FromRequest<'r> for CommandHeaders {
+impl<'r> FromRequest<'r> for VerificationHeaders {
 	type Error = ();
 
 	async fn from_request(reqest: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
@@ -36,6 +37,7 @@ impl<'r> FromRequest<'r> for CommandHeaders {
 
 
 
+// rocket
 pub fn listen() -> Rocket<Build> {
 	rocket::build()
 		.mount("/api/", routes![
@@ -45,8 +47,28 @@ pub fn listen() -> Rocket<Build> {
 
 
 
+#[derive(Serialize_repr, Deserialize_repr, Debug)]
+#[repr(u8)]
+enum InteractionType {
+	Ping = 1,
+	ApplicationCommand = 2,
+	MessageComponent = 3,
+	ApplicationCommandAutocomplete = 4,
+	ModalSubmit = 5,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Interaction {
+	id: String,
+	application_id: String,
+	#[serde(rename = "type")]
+	typ: InteractionType,
+	token: String,
+	version: u8,
+}
+
 #[post("/", format = "application/json", data = "<body>")]
-fn interaction(headers: CommandHeaders, body: String) -> Result<RawJson<String>, Status> {
+fn interaction(headers: VerificationHeaders, body: String) -> Result<RawJson<String>, Status> {
 
 	// verify using Ed25519 encryption
 	if !encryption::verify(
@@ -56,7 +78,23 @@ fn interaction(headers: CommandHeaders, body: String) -> Result<RawJson<String>,
 		return Err(Status::Unauthorized)
 	}
 
-	
-	Ok(RawJson(r#"{ "type": 1 }"#.to_string()))
+	println!("{}", body);
+
+	let interaction: Interaction = match serde_json::from_str(body.as_str()) {
+		Ok(i) => i,
+		Err(e) => {
+			println!("ERROR!!!\n{}", e);
+			return Err(Status::BadRequest)
+		},
+	};
+
+	println!("{:?}", interaction);
+
+	match interaction.typ {
+		InteractionType::Ping => Ok(RawJson(r#"{ "type": 1 }"#.to_string())),
+		_ => Ok(RawJson(r#"{ "type": 1 }"#.to_string())),
+	}
+
+	// Ok(RawJson(r#"{ "type": 1 }"#.to_string()))
 
 }

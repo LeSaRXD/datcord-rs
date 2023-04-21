@@ -3,6 +3,7 @@ use commands::{
 	Command,
 	// CommandOption,
 	// CommandOptionChoice,
+	CommandType,
 };
 
 mod webhook;
@@ -19,8 +20,8 @@ mod encryption;
 async fn main() {
 
 	let command = match Command::new(
-		"test".to_string(),
-		1,
+		"test_cmd".to_string(),
+		CommandType::ChatInput,
 		"test description".to_string(),
 		None
 	).await {

@@ -1,0 +1,3 @@
+### get all registered commands
+GET https://discord.com/api/v10/applications/{{$dotenv CLIENT_ID}}/commands
+Authorization: Bot {{$dotenv BOT_TOKEN}}

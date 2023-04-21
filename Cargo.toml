@@ -14,6 +14,7 @@ rocket = { git = "https://github.com/SergioBenitez/Rocket", rev = "91f6288", fea
 reqwest = { version = "0.11.16", features = ["json"] }
 serde = { version = "1.0.160", features = ["derive"] }
 serde_json = "1.0.96"
+serde_repr = "0.1.12"
 
 ed25519-dalek = "1.0.1"
 hex = "0.4.3"
