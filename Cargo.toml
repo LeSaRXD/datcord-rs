@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["lesar"]
 description = "A high-level Discord API wrapper"
 license = "MIT"
+readme = "README_CRATES.md"
 
 [lib]
 name = "datcord"
