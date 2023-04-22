@@ -2,6 +2,9 @@
 name = "datcord"
 version = "0.1.0"
 edition = "2021"
+authors = ["lesar"]
+description = "A high-level Discord API wrapper"
+license = "MIT"
 
 [lib]
 name = "datcord"
