@@ -13,7 +13,7 @@ path = "src/lib.rs"
 dotenv = "0.15.0"
 lazy_static = "1.4.0"
 
-rocket = { git = "https://github.com/SergioBenitez/Rocket", rev = "91f6288", features = ["json"] }
+rocket = { version = "=0.5.0-rc.3", git = "https://github.com/SergioBenitez/Rocket", rev = "91f6288", features = ["json"] }
 
 reqwest = { version = "0.11.16", features = ["json"] }
 serde = { version = "1.0.160", features = ["derive"] }
