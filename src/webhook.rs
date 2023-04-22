@@ -37,16 +37,6 @@ impl<'r> FromRequest<'r> for VerificationHeaders {
 
 
 
-// rocket
-pub fn listen() -> Rocket<Build> {
-	rocket::build()
-		.mount("/api/", routes![
-			interaction,
-		])
-}
-
-
-
 #[derive(Serialize_repr, Deserialize_repr, Debug)]
 #[repr(u8)]
 enum InteractionType {
@@ -67,6 +57,19 @@ struct Interaction {
 	version: u8,
 }
 
+
+
+// rocket
+pub fn listen() -> Rocket<Build> {
+	rocket::build()
+		.mount("/api/", routes![
+			interaction,
+		])
+}
+
+
+
+// receive interaction
 #[post("/", format = "application/json", data = "<body>")]
 fn interaction(headers: VerificationHeaders, body: String) -> Result<RawJson<String>, Status> {
 
@@ -75,7 +78,7 @@ fn interaction(headers: VerificationHeaders, body: String) -> Result<RawJson<Str
 		format!("{}{}", headers.timestamp, body), // timestamp + body
 		headers.signature // signature
 	) {
-		return Err(Status::Unauthorized)
+		return Err(Status::Unauthorized);
 	}
 
 	println!("{}", body);
