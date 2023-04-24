@@ -19,7 +19,7 @@ lazy_static! {
 
 
 
-#[derive(Serialize_repr, Deserialize_repr, Debug)]
+#[derive(Serialize_repr, Deserialize_repr)]
 #[repr(u8)]
 pub enum CommandType {
 	ChatInput = 1,
@@ -27,36 +27,55 @@ pub enum CommandType {
 	Message = 3,
 }
 
+
+
+#[async_trait]
+trait Command {
+
+	async fn register(self) -> Result<Response, reqwest::Error>;
+
+	// removes current command from the discord api
+	async fn remove(self) -> Result<Response, reqwest::Error>;
+
+}
+
 #[derive(Serialize, Deserialize)]
-pub struct Command {
-	pub id: String,
+pub struct GlobalCommand {
+	id: String,
 	name: String,
 	#[serde(rename = "type")]
 	typ: CommandType,
 	description: String,
 	options: Option<Vec<CommandOption>>,
 }
-impl Command {
+impl GlobalCommand {
 
 	// creates a new command and registers it in the discord api
 	pub async fn new(name: String, typ: CommandType, description: String, options: Option<Vec<CommandOption>>) -> Result<Self, reqwest::Error> {
 		
 		let command = Self { id: "0".to_string(), name, typ, description, options };
-
-		match CLIENT
-			.post(format!("https://discord.com/api/v10/applications/{}/commands", CLIENT_ID.to_string()))
-			.header(header::AUTHORIZATION, format!("Bot {}", BOT_TOKEN.to_string()))
-			.json(&command)
-			.send()
-			.await {
-				Ok(r) => r.json::<Command>().await,
-				Err(e) => Err(e),
-			}
+		match command.register().await {
+			Ok(r) => r.json::<Self>().await,
+			Err(e) => Err(e),
+		}
 
 	}
 
-	// removes current command from the discord api
-	pub async fn remove(self) -> Result<Response, reqwest::Error> {
+}
+#[async_trait]
+impl Command for GlobalCommand {
+
+	async fn register(self) -> Result<Response, reqwest::Error> {
+
+		CLIENT
+			.post(format!("https://discord.com/api/v10/applications/{}/commands", *CLIENT_ID))
+			.header(header::AUTHORIZATION, format!("Bot {}", *BOT_TOKEN))
+			.json(&self)
+			.send()
+			.await 
+
+	}
+	async fn remove(self) -> Result<Response, reqwest::Error> {
 
 		CLIENT
 			.delete(format!("https://discord.com/api/v10/applications/{}/commands/{}", dotenv::var("CLIENT_ID").unwrap(), self.id))
@@ -66,25 +85,65 @@ impl Command {
 
 	}
 
-	// gets all commands from the discord api
-	pub async fn get_all() -> Result<Vec<Command>, reqwest::Error> {
-
-		match CLIENT
-			.get(format!("https://discord.com/api/v10/applications/{}/commands", CLIENT_ID.to_string()))
-			.header(header::AUTHORIZATION, format!("Bot {}", BOT_TOKEN.to_string()))
-			.send()
-			.await {
-				Ok(r) => r.json::<Vec<Command>>().await,
-				Err(e) => Err(e),
-			}
-
-	}
-	
 }
 
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
+pub struct GuildCommand {
+	id: String,
+	guild_id: String,
+	name: String,
+	#[serde(rename = "type")]
+	typ: CommandType,
+	description: String,
+	options: Option<Vec<CommandOption>>,
+}
+impl GuildCommand {
+
+	// creates a new command and registers it in the discord api
+	pub async fn new(name: String, guild_id: String, typ: CommandType, description: String, options: Option<Vec<CommandOption>>) -> Result<Self, reqwest::Error> {
+		
+		let command = Self { id: "0".to_string(), guild_id, name, typ, description, options };
+		match command.register().await {
+			Ok(r) => match r.json::<Self>().await {
+				Ok(c) => Ok(c),
+				Err(e) => Err(e),
+			},
+			Err(e) => Err(e),
+		}
+
+	}
+
+}
+#[async_trait]
+impl Command for GuildCommand {
+
+	async fn register(self) -> Result<Response, reqwest::Error> {
+
+		CLIENT
+			.post(format!("https://discord.com/api/v10/applications/{}/commands", *CLIENT_ID))
+			.header(header::AUTHORIZATION, format!("Bot {}", *BOT_TOKEN))
+			.json(&self)
+			.send()
+			.await
+
+	}
+	async fn remove(self) -> Result<Response, reqwest::Error> {
+
+		CLIENT
+			.delete(format!("https://discord.com/api/v10/applications/{}/commands/{}", dotenv::var("CLIENT_ID").unwrap(), self.id))
+			.header(header::AUTHORIZATION, format!("Bot {}", dotenv::var("BOT_TOKEN").unwrap()))
+			.send()
+			.await
+
+	}
+
+}
+
+
+
+#[derive(Serialize, Deserialize)]
 pub struct CommandOption {
 	name: String,
 	#[serde(rename = "type")]
@@ -101,7 +160,7 @@ impl CommandOption {
 
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct CommandOptionChoice {
 	name: String,
 	value: String,
