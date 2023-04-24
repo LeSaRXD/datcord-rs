@@ -1,10 +1,9 @@
 use rocket::{
 	Rocket,
-	Build,
 	http::Status,
 	response::{content::RawJson},
 	Request,
-	request::{self, FromRequest},
+	request::{self, FromRequest}, Ignite,
 };
 use serde::{Serialize, Deserialize};
 use serde_repr::{Serialize_repr, Deserialize_repr};
@@ -60,11 +59,13 @@ struct Interaction {
 
 
 // rocket
-pub fn listen() -> Rocket<Build> {
+pub async fn listen() -> Result<Rocket<Ignite>, rocket::Error> {
 	rocket::build()
 		.mount("/api/", routes![
 			interaction,
 		])
+		.launch()
+		.await
 }
 
 
