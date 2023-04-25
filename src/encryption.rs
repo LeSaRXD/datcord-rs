@@ -2,7 +2,6 @@ use ed25519_dalek::{
 	PublicKey,
 	Verifier, ed25519::signature::Signature,
 };
-use hex;
 
 
 
@@ -33,7 +32,9 @@ pub fn verify(message: String, signature_hex: String) -> bool {
 		Err(_) => return false,
 	};
 
-	let public_key = PublicKey::from_bytes(&public_key_bytes).unwrap();
-	public_key.verify(message.as_bytes(), &signature).is_ok()
+	match PublicKey::from_bytes(&public_key_bytes) {
+		Ok(pk) => pk.verify(message.as_bytes(), &signature).is_ok(),
+		Err(_) => false,
+	}
 
 }

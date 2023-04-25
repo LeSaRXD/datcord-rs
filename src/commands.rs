@@ -134,7 +134,7 @@ impl GuildCommand {
 
 	}
 	
-	pub async fn get_all(guild_id: &String) -> Result<Vec<Self>, reqwest::Error> {
+	pub async fn get_all(guild_id: &str) -> Result<Vec<Self>, reqwest::Error> {
 
 		let res = CLIENT
 			.get(format!("https://discord.com/api/v10/applications/{}/guilds/{}/commands", *CLIENT_ID, guild_id))
